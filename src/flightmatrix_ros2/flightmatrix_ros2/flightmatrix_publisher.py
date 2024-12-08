@@ -2,9 +2,9 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, Imu, MagneticField
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg importctor3, Quaternion, PoseStamped, TwistStamped
+from geometry_msgs.msg import Vector3, Quaternion, PoseStamped, TwistStamped
 from std_msgs.msg import Float32MultiArray, Bool
-import tf_transformations
+import transforms3d
 import math
 import cv2
 import numpy as np
@@ -153,50 +153,50 @@ class FlightMatrixPublisher(Node):
 
     def publish_left_frame_cb(self):
         left_frame_data = self.fm_bridge.get_left_frame()
-        if left_frame_data['error'] is None:
-            left_frame = left_frame_data['frame']
+        if left_frame_data.get('error') is None:
+            left_frame = left_frame_data.get('frame')
             msg = self.bridge.cv2_to_imgmsg(left_frame, encoding='bgr8')
-            msg.header.stamp = self.convert_timestamp(left_frame_data['timestamp'])
+            msg.header.stamp = self.convert_timestamp(left_frame_data.get('timestamp'))
             self.left_frame_pub.publish(msg)
 
     def publish_right_frame_cb(self):
         right_frame_data = self.fm_bridge.get_right_frame()
-        if right_frame_data['error'] is None:
-            right_frame = right_frame_data['frame']
+        if right_frame_data.get('error') is None:
+            right_frame = right_frame_data.get('frame')
             msg = self.bridge.cv2_to_imgmsg(right_frame, encoding='bgr8')
-            msg.header.stamp = self.convert_timestamp(right_frame_data['timestamp'])
+            msg.header.stamp = self.convert_timestamp(right_frame_data.get('timestamp'))
             self.right_frame_pub.publish(msg)
 
     def publish_left_zdepth_cb(self):
         left_zdepth_data = self.fm_bridge.get_left_zdepth()
-        if left_zdepth_data['error'] is None:
-            left_zdepth = left_zdepth_data['frame']
+        if left_zdepth_data.get('error') is None:
+            left_zdepth = left_zdepth_data.get('frame')
             msg = self.bridge.cv2_to_imgmsg(left_zdepth, encoding='mono8')
-            msg.header.stamp = self.convert_timestamp(left_zdepth_data['timestamp'])
+            msg.header.stamp = self.convert_timestamp(left_zdepth_data.get('timestamp'))
             self.left_zdepth_pub.publish(msg)
 
     def publish_right_zdepth_cb(self):
         right_zdepth_data = self.fm_bridge.get_right_zdepth()
-        if right_zdepth_data['error'] is None:
-            right_zdepth = right_zdepth_data['frame']
+        if right_zdepth_data.get('error') is None:
+            right_zdepth = right_zdepth_data.get('frame')
             msg = self.bridge.cv2_to_imgmsg(right_zdepth, encoding='mono8')
-            msg.header.stamp = self.convert_timestamp(right_zdepth_data['timestamp'])
+            msg.header.stamp = self.convert_timestamp(right_zdepth_data.get('timestamp'))
             self.right_zdepth_pub.publish(msg)
 
     def publish_left_seg_cb(self):
         left_seg_data = self.fm_bridge.get_left_seg()
-        if left_seg_data['error'] is None:
-            left_seg = left_seg_data['frame']
+        if left_seg_data.get('error') is None:
+            left_seg = left_seg_data.get('frame')
             msg = self.bridge.cv2_to_imgmsg(left_seg, encoding='bgr8')  # Changed to bgr8 for RGB segmentation
-            msg.header.stamp = self.convert_timestamp(left_seg_data['timestamp'])
+            msg.header.stamp = self.convert_timestamp(left_seg_data.get('timestamp'))
             self.left_seg_pub.publish(msg)
 
     def publish_right_seg_cb(self):
         right_seg_data = self.fm_bridge.get_right_seg()
-        if right_seg_data['error'] is None:
-            right_seg = right_seg_data['frame']
+        if right_seg_data.get('error') is None:
+            right_seg = right_seg_data.get('frame')
             msg = self.bridge.cv2_to_imgmsg(right_seg, encoding='bgr8')  # Changed to bgr8 for RGB segmentation
-            msg.header.stamp = self.convert_timestamp(right_seg_data['timestamp'])
+            msg.header.stamp = self.convert_timestamp(right_seg_data.get('timestamp'))
             self.right_seg_pub.publish(msg)
     
     def create_black_image(self, single_channel=False):
@@ -236,7 +236,7 @@ class FlightMatrixPublisher(Node):
     def publish_sensor_data(self):
         sensor_data = self.fm_bridge.get_sensor_data()
         if sensor_data.get('error') is None:
-            timestamp = self.convert_timestamp(sensor_data['timestamp'])
+            timestamp = self.convert_timestamp(sensor_data.get('timestamp'))
             
             # Publish IMU data (accelerometer and gyroscope)
             imu_msg = Imu()
@@ -281,7 +281,7 @@ class FlightMatrixPublisher(Node):
             
             # Convert orientation to quaternion (from euler degrees)
             orient = sensor_data['orientation']
-            q = tf_transformations.quaternion_from_euler(
+            q = transforms3d.euler.euler2quat(
                 math.radians(orient[0]),  # roll
                 math.radians(orient[1]),  # pitch
                 math.radians(orient[2])   # yaw
