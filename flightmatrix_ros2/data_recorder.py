@@ -28,6 +28,7 @@ class DataRecorderNode(Node):
         super().__init__('data_recorder')
         
         # Add configuration parameters
+        # TODO need to set default to industry standards for all nodes
         self.declare_parameter('frame_width', 1226,
             ParameterDescriptor(type=ParameterType.PARAMETER_INTEGER,
                               description='Width of the camera frames'))
