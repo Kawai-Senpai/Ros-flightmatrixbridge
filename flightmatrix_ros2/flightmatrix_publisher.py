@@ -85,6 +85,7 @@ class FlightMatrixPublisher(Node):
 
         # Initialize bridge with parameters
         self.bridge = CvBridge()
+        # TODO check if we can simultaneously create two objects for FlightMatrixBridge from two different processes
         self.fm_bridge = FlightMatrixBridge(
             resolution=(width, height),
             noise_level=noise_level,
@@ -111,6 +112,7 @@ class FlightMatrixPublisher(Node):
         self.publish_right_seg = self.get_parameter('publish_right_seg').get_parameter_value().bool_value
         
         # Publishers
+        # TODO only create a publisher if the aforementioned parameters are true
         self.left_frame_pub = self.create_publisher(Image, 'left_frame', 10)
         self.right_frame_pub = self.create_publisher(Image, 'right_frame', 10)
         self.left_zdepth_pub = self.create_publisher(Image, 'left_zdepth', 10)
