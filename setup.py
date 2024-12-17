@@ -1,5 +1,10 @@
 from setuptools import setup
 
+# Read requirements from requirements.txt
+def get_requirements():
+    with open('requirements.txt') as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+
 package_name = 'flightmatrix_ros2'
 
 setup(
@@ -11,7 +16,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools'] + get_requirements(),
     zip_safe=True,
     maintainer='Ranit Bhowmick',
     maintainer_email='bhowmickranitking@duck.com',
