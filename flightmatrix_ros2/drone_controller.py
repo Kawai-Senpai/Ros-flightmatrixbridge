@@ -1,85 +1,60 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from flightmatrix.bridge import FlightMatrixBridge
-from rclpy.parameter import Parameter
-from rcl_interfaces.msg import ParameterDescriptor, ParameterType
-from rcl_interfaces.msg import SetParametersResult
+import numpy as np
+from multiprocessing import shared_memory
 
 class DroneController(Node):
-    """
-    A ROS2 node that controls a drone using joystick inputs and manages camera frame parameters.
-    Attributes:
-        bridge (FlightMatrixBridge): An instance of the FlightMatrixBridge class to interface with the drone.
-        subscription (Subscription): A ROS2 subscription to the 'joy' topic for receiving joystick inputs.
-    Methods:
-        __init__():
-            Initializes the DroneController node, declares parameters, and sets up the bridge and subscription.
-        parameters_callback(params):
-            Callback function that updates the bridge configuration when parameters change.
-        joy_callback(msg):
-            Callback function that maps joystick inputs to drone movement commands and sends them to the bridge.
-    """
+
     def __init__(self):
         super().__init__('drone_controller')
-        
-        # Add configuration parameters
-        self.declare_parameter('frame_width', 1226,
-            ParameterDescriptor(type=ParameterType.PARAMETER_INTEGER,
-                              description='Width of the camera frames'))
-        self.declare_parameter('frame_height', 370,
-            ParameterDescriptor(type=ParameterType.PARAMETER_INTEGER,
-                              description='Height of the camera frames'))
-        self.declare_parameter('noise_level', 0.01,
-            ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE,
-                              description='Level of noise to apply'))
-        self.declare_parameter('apply_noise', False,
-            ParameterDescriptor(type=ParameterType.PARAMETER_BOOL,
-                              description='Whether to apply noise to frames'))
 
-        # Get initial parameter values
-        width = self.get_parameter('frame_width').value
-        height = self.get_parameter('frame_height').value
-        noise_level = self.get_parameter('noise_level').value
-        apply_noise = self.get_parameter('apply_noise').value
+        # Define the size for the movement command shared memory
+        self.num_floats = 6  # As expected, there are 6 movement command values (x, y, z, r, p, y) #! Do not change this value
+        self.data_size = np.dtype(np.float32).itemsize * self.num_floats  # Each float is 4 bytes
+        self.total_size = 1 + self.data_size  # 1 byte for availability flag + space for 6 floats
+        
+        try:
+            # Try to create the shared memory block
+            self.shm = shared_memory.SharedMemory(name='MovementCommandMemory', create=True, size=self.total_size)
+            self.get_logger().info(f"Created shared memory block 'MovementCommandMemory' with size {self.total_size} bytes")
+        except FileExistsError:
+            # If the shared memory block already exists, open it
+            self.shm = shared_memory.SharedMemory(name='MovementCommandMemory', create=False)
+            self.get_logger().info(f"Opened shared memory block 'MovementCommandMemory' with size {self.total_size} bytes")
 
-        # Initialize bridge with parameters
-        self.bridge = FlightMatrixBridge(
-            resolution=(width, height),
-            noise_level=noise_level,
-            apply_noise=apply_noise
-        )
-        
-        # Add parameter change callback
-        self.add_on_set_parameters_callback(self.parameters_callback)
-        
         self.subscription = self.create_subscription(
             Joy,
             'joy',
             self.joy_callback,
             10)
+        
+        self.last_timestamp = None  # To store the last processed timestamp
 
-    def parameters_callback(self, params):
-        result = SetParametersResult(successful=True)
-        try:
-            for param in params:
-                if param.name == 'frame_width' or param.name == 'frame_height':
-                    width = self.get_parameter('frame_width').value
-                    height = self.get_parameter('frame_height').value
-                    self.bridge.set_resolution(width, height)
-                    self.get_logger().info(f'Updated resolution to {width}x{height}')
-                elif param.name == 'noise_level':
-                    self.bridge.set_noise_level(param.value)
-                    self.get_logger().info(f'Updated noise level to {param.value}')
-                elif param.name == 'apply_noise':
-                    self.bridge.set_apply_noise(param.value)
-                    self.get_logger().info(f'Updated apply_noise to {param.value}')
-        except Exception as e:
-            result.successful = False
-            result.reason = str(e)
-        return result
+    def _send_command(self, command):
+        # Create a NumPy array backed by the shared memory buffer (for the 6 float values)
+        buffer = self.shm.buf[1:]  # Skip the first byte (availability flag)
+        command_array = np.ndarray((self.num_floats,), dtype=np.float32, buffer=buffer)
+        # Write the new command data
+        command_array[:] = command
+        # Set the availability flag (first byte) to 1 (new data available)
+        self.shm.buf[0] = 1
 
     def joy_callback(self, msg):
+        
+        # Access the timestamp
+        timestamp = msg.header.stamp
+        self.get_logger().info(f"Received Joy message with timestamp: {timestamp.sec}.{timestamp.nanosec}")
+
+        # Synchronization: Ensure commands are processed in order
+        if self.last_timestamp and (timestamp.sec < self.last_timestamp.sec or 
+                                    (timestamp.sec == self.last_timestamp.sec and timestamp.nanosec <= self.last_timestamp.nanosec)):
+            self.get_logger().warn("Received an out-of-order Joy message. Ignoring.")
+            return
+
+        # Update the last processed timestamp
+        self.last_timestamp = timestamp
+
         # Map joystick axes to movement commands
         x = msg.axes[0]  # Forward/Backward control
         y = msg.axes[1]  # Left/Right control
@@ -88,12 +63,13 @@ class DroneController(Node):
         pitch = msg.axes[4]  # Pitch control
         yaw = msg.axes[5]  # Yaw control
 
-        # Send movement command to FlightMatrix
-        self.bridge.send_movement_command(x, y, z, roll, pitch, yaw)
+        command = np.array([x, y, z, roll, pitch, yaw], dtype=np.float32)   
+        self._send_command(command)
 
 def main(args=None):
     rclpy.init(args=args)
     node = DroneController()
-    rclpy.spin(node)
-    node.destroy_node()
+    if node:
+        rclpy.spin(node)
+        node.destroy_node()
     rclpy.shutdown()

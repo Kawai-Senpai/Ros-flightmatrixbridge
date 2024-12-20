@@ -13,7 +13,6 @@ setup(
     ],
     install_requires=[
         'setuptools',
-        'flightmatrixbridge==1.7.0',
         'transforms3d==0.4.2'
     ],
     zip_safe=True,
@@ -24,8 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'flightmatrix_publisher = flightmatrix_ros2.flightmatrix_publisher:main',
-            'drone_controller = flightmatrix_ros2.drone_controller:main',
-            'data_recorder = flightmatrix_ros2.data_recorder:main',
+            'drone_controller = flightmatrix_ros2.drone_controller:main'
         ],
     },
 )

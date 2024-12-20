@@ -1,0 +1,15 @@
+resolution:
+  width: 1226
+  height: 370
+
+publishers:
+  left_frame: true
+  right_frame: false
+  left_zdepth: false
+  right_zdepth: false
+  left_seg: false
+  right_seg: false
+  sensor_data: false
+
+  queue_size: 10
+  timer_delay: 0.0
