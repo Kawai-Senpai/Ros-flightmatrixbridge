@@ -3,11 +3,31 @@ from rclpy.node import Node
 from sensor_msgs.msg import Joy
 import numpy as np
 from multiprocessing import shared_memory
+from rclpy.parameter import Parameter
+import yaml
+import os
 
 class DroneController(Node):
 
     def __init__(self):
         super().__init__('drone_controller')
+
+        self.declare_parameter('config_file', '')
+        config_file = self.get_parameter('config_file').get_parameter_value().string_value
+
+        if not config_file:
+            self.get_logger().error("Config file path not provided")
+            return
+
+        try:
+            with open(config_file, 'r') as file:
+                config = yaml.safe_load(file)
+        except FileNotFoundError:
+            self.get_logger().error(f"Config file not found: {config_file}")
+            return
+        except yaml.YAMLError as exc:
+            self.get_logger().error(f"Error parsing config file: {exc}")
+            return
 
         # Define the size for the movement command shared memory
         self.num_floats = 6  # As expected, there are 6 movement command values (x, y, z, r, p, y) #! Do not change this value

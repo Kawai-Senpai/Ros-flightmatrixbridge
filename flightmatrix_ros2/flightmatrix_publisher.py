@@ -14,17 +14,20 @@ import os
 import yaml
 from multiprocessing import shared_memory
 import struct
+from rclpy.parameter import Parameter
 
 class FlightMatrixPublisher(Node):
     
     def __init__(self):
         super().__init__('flightmatrix_publisher')
         
-        config_file = os.path.join(
-            get_package_share_directory('flightmatrix_ros2'),
-            'config',
-            'config.yaml'
-        )
+        self.declare_parameter('config_file', '')
+        config_file = self.get_parameter('config_file').get_parameter_value().string_value
+        
+        if not config_file:
+            self.get_logger().error("Config file path not provided")
+            return
+        
         try:
             with open(config_file, 'r') as file:
                 config = yaml.safe_load(file)

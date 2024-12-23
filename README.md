@@ -99,6 +99,14 @@ publishers:
 2. Place your `config.yaml` file inside the `config` directory.
 3. Modify the configuration file to enable or disable specific publishers and set the desired parameters.
 
+### Supplying the Configuration File
+
+To supply the configuration file when launching the system, use the `config_file` argument:
+
+```sh
+ros2 launch flightmatrix_ros2 flightmatrix.launch.py config_file:=/path/to/your/config.yaml
+```
+
 ## Usage
 
 1. Ensure ROS2 is installed and sourced.
