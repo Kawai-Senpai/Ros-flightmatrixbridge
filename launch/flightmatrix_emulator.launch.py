@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    config_file_path = "/path/to/config.emulator.yaml"
+    config_file_path = "/path/to/config_emulator.yaml"
     data_directory_path = "/path/to/record_folder"
 
     config_file = LaunchConfiguration('config_file', default=config_file_path)
@@ -25,7 +25,7 @@ def generate_launch_description():
         ),
         Node(
             package='flightmatrix_ros2',
-            executable='flightmatrix_publisher.emulator',
+            executable='flightmatrix_publisher_emulator',
             name='flightmatrix_publisher_node',
             output='screen',
             parameters=[{'config_file': config_file, 'data_directory': data_directory}]

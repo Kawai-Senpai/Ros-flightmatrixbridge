@@ -10,7 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/flightmatrix.launch.py']),
+        ('share/' + package_name + '/launch', ['launch/*.launch.py']),
     ],
     install_requires=[
         'setuptools',
@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'flightmatrix_publisher = flightmatrix_ros2.flightmatrix_publisher:main',
+            'flightmatrix_publisher_emulator = flightmatrix_ros2.flightmatrix_publisher_emulator:main',
             'drone_controller = flightmatrix_ros2.drone_controller:main'
         ],
     },
