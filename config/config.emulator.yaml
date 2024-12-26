@@ -17,8 +17,3 @@ flightmatrix_publisher:
 
       queue_size: 10
       timer_delay: 0.0
-
-drone_controller:
-  ros__parameters:
-
-    placeholder: 0
