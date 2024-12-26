@@ -7,12 +7,13 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     share_dir = get_package_share_directory('flightmatrix_ros2')
-    config_file = LaunchConfiguration('config_file')
+    config_file_path = os.path.join(share_dir, '..', '..', '..', '..', 'src', 'flightmatrix_ros2', 'config', 'config.yaml')
+    config_file = LaunchConfiguration('config_file', default=config_file_path)
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'config_file',
-            default_value=os.path.join(share_dir, 'config', 'config.yaml'),
+            default_value=config_file_path,
             description='Absolute path to the config file'
         ),
         Node(
@@ -20,12 +21,13 @@ def generate_launch_description():
             executable='flightmatrix_publisher',
             name='flightmatrix_publisher',
             output='screen',
-            parameters=[config_file]
+            parameters=[{'config_file': config_file}]
         ),
         Node(
             package='flightmatrix_ros2',
             executable='drone_controller',
             name='drone_controller',
-            output='screen'
+            output='screen',
+            parameters=[{'config_file': config_file}]
         )
     ])

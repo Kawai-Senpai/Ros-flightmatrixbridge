@@ -30,7 +30,7 @@ class FlightMatrixPublisher(Node):
         
         try:
             with open(config_file, 'r') as file:
-                config = yaml.safe_load(file)
+                config = yaml.safe_load(file)['flightmatrix_publisher']['ros__parameters']
         except FileNotFoundError:
             self.get_logger().error(f"Config file not found: {config_file}")
             return
@@ -186,15 +186,15 @@ class FlightMatrixPublisher(Node):
         
         # Convert to m/s² (from cm/s²)
         accel = sensor_array[9:12] / 100.0
-        imu_msg.linear_acceleration.x = accel[0] 
-        imu_msg.linear_acceleration.y = accel[1]
-        imu_msg.linear_acceleration.z = accel[2]
+        imu_msg.linear_acceleration.x = float(accel[0])
+        imu_msg.linear_acceleration.y = float(accel[1])
+        imu_msg.linear_acceleration.z = float(accel[2])
         
         # Convert to radians/s (from degrees/s)
         gyro = sensor_array[6:9]
-        imu_msg.angular_velocity.x = math.radians(gyro[0])
-        imu_msg.angular_velocity.y = math.radians(gyro[1])
-        imu_msg.angular_velocity.z = math.radians(gyro[2])
+        imu_msg.angular_velocity.x = float(math.radians(gyro[0]))
+        imu_msg.angular_velocity.y = float(math.radians(gyro[1]))
+        imu_msg.angular_velocity.z = float(math.radians(gyro[2]))
         
         self.imu_pub.publish(imu_msg)
         
@@ -203,9 +203,9 @@ class FlightMatrixPublisher(Node):
         mag_msg.header.stamp = timestamp
         mag_msg.header.frame_id = 'base_link'
         mag = sensor_array[12:15]
-        mag_msg.magnetic_field.x = mag[0]
-        mag_msg.magnetic_field.y = mag[1]
-        mag_msg.magnetic_field.z = mag[2]
+        mag_msg.magnetic_field.x = float(mag[0])
+        mag_msg.magnetic_field.y = float(mag[1])
+        mag_msg.magnetic_field.z = float(mag[2])
         self.mag_pub.publish(mag_msg)
         
         # Publish odometry (location and orientation)
@@ -216,9 +216,9 @@ class FlightMatrixPublisher(Node):
         
         # Convert position to meters (from cm)
         loc = sensor_array[:3] / 100.0
-        odom_msg.pose.pose.position.x = loc[0] 
-        odom_msg.pose.pose.position.y = loc[1]
-        odom_msg.pose.pose.position.z = loc[2] 
+        odom_msg.pose.pose.position.x = float(loc[0])
+        odom_msg.pose.pose.position.y = float(loc[1])
+        odom_msg.pose.pose.position.z = float(loc[2])
         
         # Convert orientation to quaternion (from euler degrees)
         orient = sensor_array[3:6]
@@ -227,12 +227,12 @@ class FlightMatrixPublisher(Node):
             math.radians(orient[1]),  # pitch
             math.radians(orient[2])   # yaw
         )
-        odom_msg.pose.pose.orientation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+        odom_msg.pose.pose.orientation = Quaternion(x=float(q[0]), y=float(q[1]), z=float(q[2]), w=float(q[3]))
         self.odom_pub.publish(odom_msg)
         
         # Publish LiDAR data
         lidar_msg = Float32MultiArray()
-        lidar_msg.data = sensor_array[15:20]  # Keep in cm
+        lidar_msg.data = [float(value) for value in sensor_array[15:20]]  # Keep in cm
         self.lidar_pub.publish(lidar_msg)
         
         # Publish collision data if collision detected
@@ -241,9 +241,9 @@ class FlightMatrixPublisher(Node):
             collision_msg.header.stamp = timestamp
             collision_msg.header.frame_id = 'base_link'
             # Convert collision location to meters (from cm)
-            collision_msg.pose.position.x = sensor_array[21] / 100.0
-            collision_msg.pose.position.y = sensor_array[22] / 100.0
-            collision_msg.pose.position.z = sensor_array[23] / 100.0
+            collision_msg.pose.position.x = float(sensor_array[21] / 100.0)
+            collision_msg.pose.position.y = float(sensor_array[22] / 100.0)
+            collision_msg.pose.position.z = float(sensor_array[23] / 100.0)
             self.collision_pub.publish(collision_msg)
 
 def main(args=None):
