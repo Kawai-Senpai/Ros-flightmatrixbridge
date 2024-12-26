@@ -16,6 +16,81 @@ This is actually a ROS-based API for Flight Matrix Simulation Software.
 
 Download the software from [Flight Matrix](https://gamejolt.com/games/flightmatrix/933049).
 
+## Emulator Mode
+
+The FlightMatrix Bridge includes an emulator mode that allows you to replay recorded data without requiring the actual Flight Matrix software. This is useful for testing and development.
+
+### Data Format Requirements
+
+The emulator expects data in the following structure:
+
+```
+data_directory/
+├── sensor_data.csv
+├── left_frames/
+│   ├── 0.png
+│   ├── 1.png
+│   └── ...
+├── right_frames/
+├── left_zdepth/
+├── right_zdepth/
+├── left_segmentation/
+└── right_segmentation/
+```
+
+#### sensor_data.csv Format
+The CSV file must contain the following columns:
+- timestamp (milliseconds)
+- accelerometer_x, accelerometer_y, accelerometer_z (cm/s²)
+- gyroscope_x, gyroscope_y, gyroscope_z (degrees/s)
+- magnetometer_x, magnetometer_y, magnetometer_z
+- location_x, location_y, location_z (cm)
+- orientation_roll, orientation_pitch, orientation_yaw (degrees)
+- lidar_forward, lidar_backward, lidar_left, lidar_right, lidar_bottom
+- collision_status (boolean)
+- collision_location_x, collision_location_y, collision_location_z (cm)
+
+#### Image Data
+- All image files should be numbered sequentially (0.png, 1.png, etc.)
+- Images must match the resolution specified in the config file
+- RGB images should be in BGR8 format
+- Depth images should be in grayscale
+
+### Launching the Emulator
+
+1. Place your recorded data in a directory following the structure above
+2. Configure the emulator:
+   ```yaml
+   # config_emulator.yaml
+   flightmatrix_publisher:
+     ros__parameters:
+       resolution:
+         width: 1226
+         height: 370
+       publishers:
+         left_frame: true
+         right_frame: false
+         left_zdepth: false
+         right_zdepth: false
+         left_seg: false
+         right_seg: false
+         sensor_data: true
+         queue_size: 10
+         timer_delay: 0.0
+   ```
+
+3. Launch the emulator:
+   ```sh
+   ros2 launch flightmatrix_ros2 flightmatrix_emulator.launch.py config_file:=/path/to/config_emulator.yaml data_directory:=/path/to/data_directory
+   ```
+
+### Debug Mode
+
+To enable debug logging for synchronization monitoring:
+```sh
+ros2 param set /flightmatrix_publisher_node debug_sync true
+```
+
 ## Launch Files
 
 ### flightmatrix.launch.py
