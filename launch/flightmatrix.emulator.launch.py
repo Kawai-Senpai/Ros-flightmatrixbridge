@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    config_file_path = "/path/to/config.yaml"
+    config_file_path = "/path/to/config.emulator.yaml"
     data_directory_path = "/path/to/record_folder"
 
     config_file = LaunchConfiguration('config_file', default=config_file_path)

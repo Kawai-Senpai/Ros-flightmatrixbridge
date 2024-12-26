@@ -6,8 +6,8 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('flightmatrix_ros2')
-    config_file_path = os.path.join(share_dir, '..', '..', '..', '..', 'src', 'flightmatrix_ros2', 'config', 'config.yaml')
+    
+    config_file_path = "/path/to/config.yaml"
     config_file = LaunchConfiguration('config_file', default=config_file_path)
 
     return LaunchDescription([
