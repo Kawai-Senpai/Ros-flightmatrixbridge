@@ -20,7 +20,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'data_directory',
-            default_value='/path/to/sample',
+            default_value=data_directory_path,
             description='Absolute path to the data directory'
         ),
         Node(
