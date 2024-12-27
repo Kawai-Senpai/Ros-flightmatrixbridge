@@ -10,7 +10,7 @@ For more information, visit the [GitHub repository](https://github.com/Kawai-Sen
 
 This is actually a ROS-based API for Flight Matrix Simulation Software.
 
-![FlightMatrix Bridge Cover](assets/SplashScreenBridge-ROS.png)
+![FlightMatrix Bridge Cover](https://github.com/Kawai-Senpai/Ros-flightmatrixbridge/blob/25f5746eb33855ee0bda88b32eba03786cbfa19e/Assets/SplashScreenBridge-ROS.png)
 
 **FlightMatrix Bridge** is a Python-based API designed for controlling and fetching information, frames, and other data from Flight Matrix. This library enables efficient and real-time communication between various processes in a system, primarily designed for interfacing flight simulators, UAV systems, or other robotics platforms. It utilizes the `multiprocessing.shared_memory` module to share data such as frames, sensor data, and movement commands across multiple processes.
 
