@@ -56,27 +56,33 @@ The CSV file must contain the following columns:
 - RGB images should be in BGR8 format
 - Depth images should be in grayscale
 
+#### Sample Data
+- Download the sample data from [Google Drive](https://drive.google.com/drive/folders/1dr1cKaWzNfepxaDq-yNX0AATtniOPe1L)
+
 ### Launching the Emulator
 
 1. Place your recorded data in a directory following the structure above
 2. Configure the emulator:
    ```yaml
-   # config_emulator.yaml
-   flightmatrix_publisher:
-     ros__parameters:
-       resolution:
-         width: 1226
-         height: 370
-       publishers:
-         left_frame: true
-         right_frame: false
-         left_zdepth: false
-         right_zdepth: false
-         left_seg: false
-         right_seg: false
-         sensor_data: true
-         queue_size: 10
-         timer_delay: 0.0
+  # config_emulator.yaml
+  flightmatrix_publisher:
+    ros__parameters:
+
+      resolution:
+        width: 1226
+        height: 370
+
+      publishers:
+        left_frame: true
+        right_frame: false
+        left_zdepth: false
+        right_zdepth: false
+        left_seg: false
+        right_seg: false
+        sensor_data: true
+
+        queue_size: 10
+        timer_delay: 0.0
    ```
 
 3. Launch the emulator:
@@ -98,21 +104,20 @@ ros2 param set /flightmatrix_publisher_node debug_sync true
 This launch file starts the necessary nodes for the Flight Matrix system.
 
 ```python
-import os
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('flightmatrix_ros2')
-    config_file = LaunchConfiguration('config_file')
+    
+    config_file_path = "/path/to/config.yaml"
+    config_file = LaunchConfiguration('config_file', default=config_file_path)
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'config_file',
-            default_value=os.path.join(share_dir, 'config', 'config.yaml'),
+            default_value=config_file_path,
             description='Absolute path to the config file'
         ),
         Node(
@@ -120,16 +125,55 @@ def generate_launch_description():
             executable='flightmatrix_publisher',
             name='flightmatrix_publisher',
             output='screen',
-            parameters=[config_file]
+            parameters=[{'config_file': config_file}]
         ),
         Node(
             package='flightmatrix_ros2',
             executable='drone_controller',
             name='drone_controller',
-            output='screen'
+            output='screen',
+            parameters=[{'config_file': config_file}]
         )
     ])
+```
 
+### flightmatrix_emulator.launch.py
+
+This launch file starts the FlightMatrix emulator node for replaying recorded data.
+
+```python
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+
+def generate_launch_description():
+
+    config_file_path = "/path/to/config_emulator.yaml"
+    data_directory_path = "/path/to/record_folder"
+
+    config_file = LaunchConfiguration('config_file', default=config_file_path)
+    data_directory = LaunchConfiguration('data_directory', default=data_directory_path)
+
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'config_file',
+            default_value=config_file_path,
+            description='Absolute path to the config file'
+        ),
+        DeclareLaunchArgument(
+            'data_directory',
+            default_value=data_directory_path,
+            description='Absolute path to the data directory'
+        ),
+        Node(
+            package='flightmatrix_ros2',
+            executable='flightmatrix_publisher_emulator',
+            name='flightmatrix_publisher_node',
+            output='screen',
+            parameters=[{'config_file': config_file, 'data_directory': data_directory}]
+        )
+    ])
 ```
 
 ## Nodes
@@ -165,21 +209,29 @@ The configuration file `config.yaml` should be placed in the `config` directory 
 ### Example Configuration (`config.yaml`)
 
 ```yaml
-resolution:
-  width: 1226
-  height: 370
+  flightmatrix_publisher:
+    ros__parameters:
 
-publishers:
-  left_frame: true
-  right_frame: false
-  left_zdepth: false
-  right_zdepth: false
-  left_seg: false
-  right_seg: false
-  sensor_data: false
+      resolution:
+        width: 1226
+        height: 370
 
-  queue_size: 10
-  timer_delay: 0.0
+      publishers:
+        left_frame: true
+        right_frame: false
+        left_zdepth: false
+        right_zdepth: false
+        left_seg: false
+        right_seg: false
+        sensor_data: true
+
+        queue_size: 10
+        timer_delay: 0.0
+
+  drone_controller:
+    ros__parameters:
+
+      placeholder: 0
 ```
 
 ### Using the Configuration
