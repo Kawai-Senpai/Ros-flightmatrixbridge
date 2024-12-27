@@ -6,7 +6,6 @@ from geometry_msgs.msg import Quaternion, PoseStamped
 from std_msgs.msg import Float32MultiArray
 import transforms3d
 import math
-from builtin_interfaces.msg import Time
 from cv_bridge import CvBridge
 import os
 import yaml
@@ -170,7 +169,7 @@ class FlightMatrixPublisher(Node):
         if self._current_sensor_data is None:
             try:
                 self._current_sensor_data = self.sensor_data.iloc[self.frame_index]
-                self._current_timestamp = self.convert_timestamp(self._current_sensor_data['timestamp'])
+                self._current_timestamp = self.get_clock().now().to_msg()
             except IndexError:
                 self.get_logger().error(f"Frame index {self.frame_index} out of range")
                 return None, None
@@ -185,25 +184,12 @@ class FlightMatrixPublisher(Node):
                 self.get_logger().error(f"Frame not found: {frame_path}")
                 return None
             
-            _, timestamp = self._get_sensor_data()
-            if timestamp is None:
-                return None
-                
             msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8' if rgb else 'mono8')
-            msg.header.stamp = timestamp
+            msg.header.stamp = self.get_clock().now().to_msg()
             return msg
         except Exception as e:
             self.get_logger().error(f"Error reading frame: {e}")
             return None
-
-    def convert_timestamp(self, timestamp_ms):
-        """Convert millisecond timestamp to ROS Time message"""
-        seconds = timestamp_ms // 1000
-        nanoseconds = (timestamp_ms % 1000) * 1000000
-        time_msg = Time()
-        time_msg.sec = int(seconds)
-        time_msg.nanosec = int(nanoseconds)
-        return time_msg
 
     def publish_left_frame_cb(self):
         if not self.publish_flags.get('left_frame', True):  # Skip if publisher not enabled
@@ -260,14 +246,16 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published right segmentation {self.frame_index}")
 
     def publish_sensor_data(self):
-        if not self.publish_flags.get('sensor_data', True):
+        if self.publish_flags.get('sensor_data', True):
             sensor_row, timestamp = self._get_sensor_data()
-            if sensor_row is None or timestamp is None:
+            if sensor_row is None:
                 return
+
+            current_time = self.get_clock().now().to_msg()
 
             # Publish IMU data (accelerometer and gyroscope)
             imu_msg = Imu()
-            imu_msg.header.stamp = timestamp
+            imu_msg.header.stamp = current_time
             imu_msg.header.frame_id = 'base_link'
             
             # Convert to m/s² (from cm/s²)
@@ -284,7 +272,7 @@ class FlightMatrixPublisher(Node):
             
             # Publish magnetometer data
             mag_msg = MagneticField()
-            mag_msg.header.stamp = timestamp
+            mag_msg.header.stamp = current_time
             mag_msg.header.frame_id = 'base_link'
             mag_msg.magnetic_field.x = float(sensor_row['magnetometer_x'])
             mag_msg.magnetic_field.y = float(sensor_row['magnetometer_y'])
@@ -293,7 +281,7 @@ class FlightMatrixPublisher(Node):
             
             # Publish odometry (location and orientation)
             odom_msg = Odometry()
-            odom_msg.header.stamp = timestamp
+            odom_msg.header.stamp = current_time
             odom_msg.header.frame_id = 'odom'
             odom_msg.child_frame_id = 'base_link'
             
@@ -325,7 +313,7 @@ class FlightMatrixPublisher(Node):
             # Publish collision data if collision detected
             if sensor_row['collision_status']:  # If collision status is True
                 collision_msg = PoseStamped()
-                collision_msg.header.stamp = timestamp
+                collision_msg.header.stamp = current_time
                 collision_msg.header.frame_id = 'base_link'
                 # Convert collision location to meters (from cm)
                 collision_msg.pose.position.x = float(sensor_row['collision_location_x'] / 100.0)
