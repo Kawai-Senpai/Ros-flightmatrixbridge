@@ -49,6 +49,7 @@ class FlightMatrixPublisher(Node):
             self.get_logger().error(f"Sensor data file not found: {sensor_data_path}")
             return
         self.sensor_data = pd.read_csv(sensor_data_path)
+        self.get_logger().info(f"Sensor data loaded: {sensor_data_path}")
         self.frame_index = 0
         
         # Initialize flags only for enabled publishers
@@ -110,6 +111,7 @@ class FlightMatrixPublisher(Node):
             self.lidar_pub = self.create_publisher(Float32MultiArray, 'lidar_data', config['publishers']['queue_size'])
             self.collision_pub = self.create_publisher(PoseStamped, 'collision', config['publishers']['queue_size'])
             self.sensor_timer = self.create_timer(config['publishers']['timer_delay'], self.publish_sensor_data)
+            self.publish_flags['sensor_data'] = False  # Ensure sensor_data flag is initialized
     
     def _check_directories_and_resolution(self, config):
         
@@ -192,7 +194,7 @@ class FlightMatrixPublisher(Node):
             return None
 
     def publish_left_frame_cb(self):
-        if not self.publish_flags.get('left_frame', True):  # Skip if publisher not enabled
+        if not self.publish_flags['left_frame']:  # Changed condition
             msg = self._get_frame('left_frames', rgb=True)
             if msg:
                 self.left_frame_pub.publish(msg)
@@ -201,7 +203,7 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published left frame {self.frame_index}")
 
     def publish_right_frame_cb(self):
-        if not self.publish_flags.get('right_frame', True):  # Skip if publisher not enabled
+        if not self.publish_flags['right_frame']:  # Changed condition
             msg = self._get_frame('right_frames', rgb=True)
             if msg:
                 self.right_frame_pub.publish(msg)
@@ -210,7 +212,7 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published right frame {self.frame_index}")
 
     def publish_left_zdepth_cb(self):
-        if not self.publish_flags.get('left_zdepth', True):  # Skip if publisher not enabled
+        if not self.publish_flags['left_zdepth']:  # Changed condition
             msg = self._get_frame('left_zdepth', rgb=False)
             if msg:
                 self.left_zdepth_pub.publish(msg)
@@ -219,7 +221,7 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published left zdepth {self.frame_index}")
 
     def publish_right_zdepth_cb(self):
-        if not self.publish_flags.get('right_zdepth', True):  # Skip if publisher not enabled
+        if not self.publish_flags['right_zdepth']:  # Changed condition
             msg = self._get_frame('right_zdepth', rgb=False)
             if msg:
                 self.right_zdepth_pub.publish(msg)
@@ -228,7 +230,7 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published right zdepth {self.frame_index}")
 
     def publish_left_seg_cb(self):
-        if not self.publish_flags.get('left_seg', True):  # Skip if publisher not enabled
+        if not self.publish_flags['left_seg']:  # Changed condition
             msg = self._get_frame('left_segmentation', rgb=True)
             if msg:
                 self.left_seg_pub.publish(msg)
@@ -237,7 +239,7 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published left segmentation {self.frame_index}")
 
     def publish_right_seg_cb(self):
-        if not self.publish_flags.get('right_seg', True):  # Skip if publisher not enabled
+        if not self.publish_flags['right_seg']:  # Changed condition
             msg = self._get_frame('right_segmentation', rgb=True)
             if msg:
                 self.right_seg_pub.publish(msg)
@@ -246,7 +248,7 @@ class FlightMatrixPublisher(Node):
                     self.get_logger().debug(f"Published right segmentation {self.frame_index}")
 
     def publish_sensor_data(self):
-        if self.publish_flags.get('sensor_data', True):
+        if not self.publish_flags['sensor_data']:
             sensor_row, timestamp = self._get_sensor_data()
             if sensor_row is None:
                 return
@@ -269,7 +271,7 @@ class FlightMatrixPublisher(Node):
             imu_msg.angular_velocity.z = float(math.radians(sensor_row['gyroscope_z']))
             
             self.imu_pub.publish(imu_msg)
-            
+
             # Publish magnetometer data
             mag_msg = MagneticField()
             mag_msg.header.stamp = current_time
@@ -278,7 +280,7 @@ class FlightMatrixPublisher(Node):
             mag_msg.magnetic_field.y = float(sensor_row['magnetometer_y'])
             mag_msg.magnetic_field.z = float(sensor_row['magnetometer_z'])
             self.mag_pub.publish(mag_msg)
-            
+
             # Publish odometry (location and orientation)
             odom_msg = Odometry()
             odom_msg.header.stamp = current_time
@@ -298,7 +300,7 @@ class FlightMatrixPublisher(Node):
             )
             odom_msg.pose.pose.orientation = Quaternion(x=float(q[0]), y=float(q[1]), z=float(q[2]), w=float(q[3]))
             self.odom_pub.publish(odom_msg)
-            
+
             # Publish LiDAR data
             lidar_msg = Float32MultiArray()
             lidar_msg.data = [
@@ -309,7 +311,7 @@ class FlightMatrixPublisher(Node):
                 float(sensor_row['lidar_bottom'])
             ]
             self.lidar_pub.publish(lidar_msg)
-            
+
             # Publish collision data if collision detected
             if sensor_row['collision_status']:  # If collision status is True
                 collision_msg = PoseStamped()
