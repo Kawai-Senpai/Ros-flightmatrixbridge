@@ -63,36 +63,41 @@ The CSV file must contain the following columns:
 
 1. Place your recorded data in a directory following the structure above
 2. Configure the emulator:
-   ```yaml
-  # config_emulator.yaml
-  flightmatrix_publisher:
-    ros__parameters:
 
-      resolution:
-        width: 1226
-        height: 370
+```yaml
 
-      publishers:
-        left_frame: true
-        right_frame: false
-        left_zdepth: false
-        right_zdepth: false
-        left_seg: false
-        right_seg: false
-        sensor_data: true
+# config_emulator.yaml
+flightmatrix_publisher:
+  ros__parameters:
 
-        queue_size: 10
-        timer_delay: 0.0
-   ```
+    resolution:
+      width: 1226
+      height: 370
+
+    publishers:
+      left_frame: true
+      right_frame: false
+      left_zdepth: false
+      right_zdepth: false
+      left_seg: false
+      right_seg: false
+      sensor_data: true
+
+      queue_size: 10
+      timer_delay: 0.0
+
+```
 
 3. Launch the emulator:
-   ```sh
-   ros2 launch flightmatrix_ros2 flightmatrix_emulator.launch.py config_file:=/path/to/config_emulator.yaml data_directory:=/path/to/data_directory
-   ```
+
+```sh
+ros2 launch flightmatrix_ros2 flightmatrix_emulator.launch.py config_file:=/path/to/config_emulator.yaml data_directory:=/path/to/data_directory
+```
 
 ### Debug Mode
 
 To enable debug logging for synchronization monitoring:
+
 ```sh
 ros2 param set /flightmatrix_publisher_node debug_sync true
 ```
