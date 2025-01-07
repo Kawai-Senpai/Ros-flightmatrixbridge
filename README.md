@@ -30,7 +30,7 @@ data_directory/
 ├── left_frames/
 │   ├── 0.png
 │   ├── 1.png
-│   └── ....
+│   └── ...
 ├── right_frames/
 ├── left_zdepth/
 ├── right_zdepth/
