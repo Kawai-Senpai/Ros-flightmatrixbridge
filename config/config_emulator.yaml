@@ -2,6 +2,10 @@
 flightmatrix_publisher:
   ros__parameters:
 
+    data:
+      data_directory: "/home/prity/Data/default-dense"
+      data_type: "FLIGHTMATRIX" # "FLIGHTMATRIX" or "KITTI"
+
     resolution:
       width: 1226
       height: 370

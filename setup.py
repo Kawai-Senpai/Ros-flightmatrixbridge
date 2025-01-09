@@ -1,4 +1,5 @@
 from setuptools import setup
+from glob import glob
 
 package_name = 'flightmatrix_ros2'
 
@@ -12,6 +13,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/flightmatrix.launch.py']),
         ('share/' + package_name + '/launch', ['launch/flightmatrix_emulator.launch.py']),
+        ('share/' + package_name + '/config', glob('config/*.yaml'))
     ],
     install_requires=[
         'setuptools',
