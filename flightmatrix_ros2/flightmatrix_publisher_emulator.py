@@ -11,7 +11,8 @@ import os
 import yaml
 import pandas as pd
 import cv2
-from pyproj import Proj, transform
+from pyproj import Proj
+from pyproj import Transformer, CRS
 
 class BaseDataProvider:
     def __init__(self, data_dir, config, data_settings, logger):
@@ -21,7 +22,6 @@ class BaseDataProvider:
         self.logger = logger
         self.frame_index = 0
         self._current_sensor_data = None
-        self._current_timestamp = None
 
         #? Initialize frame map
         self.frame_map = {
@@ -52,7 +52,6 @@ class BaseDataProvider:
             if self.frame_index < self.get_total_frames() - 1:
                 self.frame_index += 1
         self._current_sensor_data = None
-        self._current_timestamp = None
 
     def get_total_frames(self):
         raise NotImplementedError
@@ -92,11 +91,10 @@ class FlightMatrixDataProvider(BaseDataProvider):
         if self._current_sensor_data is None:
             try:
                 self._current_sensor_data = self.sensor_data.iloc[self.frame_index]
-                self._current_timestamp = self.get_clock().now().to_msg()
             except IndexError:
                 self.logger.error(f"Frame index {self.frame_index} out of range")
-                return None, None
-        return self._current_sensor_data, self._current_timestamp
+                return None
+        return self._current_sensor_data
 
     def get_frame(self, frame_type, rgb=True):
         try:
@@ -106,10 +104,8 @@ class FlightMatrixDataProvider(BaseDataProvider):
             if frame is None:
                 self.logger.error(f"Frame not found: {frame_path}")
                 return None
-            
-            msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8' if rgb else 'mono8')
-            msg.header.stamp = self.get_clock().now().to_msg()
-            return msg
+        
+            return frame
         except Exception as e:
             self.logger.error(f"Error reading frame: {e}")
             return None
@@ -171,8 +167,9 @@ class KittiDataProvider(BaseDataProvider):
     
     def __init__(self, data_dir, config, data_settings, logger):
         super().__init__(data_dir, config, data_settings, logger)
-        self.proj_wgs84 = Proj(init=config['projection']['wgs84'])
-        self.proj_local = Proj(proj=config['projection']['local_proj'], zone=config['projection']['local_zone'], datum=config['projection']['local_datum'])
+        
+        """self.proj_wgs84 = Proj(init=config['projection']['wgs84'])
+        self.proj_local = Proj(proj=config['projection']['local_proj'], zone=config['projection']['local_zone'], datum=config['projection']['local_datum'])"""
 
     def load_data(self):
 
@@ -205,11 +202,10 @@ class KittiDataProvider(BaseDataProvider):
         if self._current_sensor_data is None:
             try:
                 self._current_sensor_data = self.sensor_data.iloc[self.frame_index]
-                self._current_timestamp = self.get_clock().now().to_msg()
             except IndexError:
                 self.logger.error(f"Frame index {self.frame_index} out of range")
-                return None, None
-        return self._current_sensor_data, self._current_timestamp
+                return None
+        return self._current_sensor_data
 
     def get_frame(self, frame_type, rgb=True):
         try:
@@ -219,9 +215,7 @@ class KittiDataProvider(BaseDataProvider):
             if frame is None:
                 self.logger.error(f"Frame not found: {frame_path}")
                 return None
-            msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8' if rgb else 'mono8')
-            msg.header.stamp = self.get_clock().now().to_msg()
-            return msg
+            return frame
         except Exception as e:
             self.logger.error(f"Error reading frame: {e}")
             return None
@@ -244,17 +238,20 @@ class KittiDataProvider(BaseDataProvider):
 
     def get_odometry_data(self, sensor_row):
         odom_msg = Odometry()
-        
-        # Convert latitude, longitude, altitude to Cartesian coordinates
-        x, y = transform(self.proj_wgs84, self.proj_local, sensor_row[1], sensor_row[0])
-        z = sensor_row[2]
-        
-        odom_msg.pose.pose.position.x = x
-        odom_msg.pose.pose.position.y = y
-        odom_msg.pose.pose.position.z = z
-        
-        q = transforms3d.euler.euler2quat(sensor_row[3], sensor_row[4], sensor_row[5])  # roll, pitch, yaw
+
+        odom_msg.pose.pose.position.x = sensor_row[0]
+        odom_msg.pose.pose.position.y = sensor_row[1]
+        odom_msg.pose.pose.position.z = sensor_row[2]
+
+        # Convert roll, pitch, yaw to quaternion
+        roll = sensor_row[3]
+        pitch = sensor_row[4]
+        yaw = sensor_row[5]
+
+        # Ensure the correct order of angles and axes
+        q = transforms3d.euler.euler2quat(roll, pitch, yaw, axes='sxyz')
         odom_msg.pose.pose.orientation = Quaternion(x=q[1], y=q[2], z=q[3], w=q[0])
+        
         return odom_msg
 
     def get_lidar_data(self, sensor_row):
@@ -278,7 +275,8 @@ class FlightMatrixPublisher(Node):
         try:
             with open(config_file, 'r') as file:
                 
-                config = yaml.safe_load(file)['flightmatrix_publisher']['ros__parameters']
+                raw_config = yaml.safe_load(file)
+                config = raw_config['flightmatrix_publisher']['ros__parameters']
 
                 #? Initialize data directory, data type, and loop parameters
                 if config['data']['data_directory']:
@@ -302,7 +300,7 @@ class FlightMatrixPublisher(Node):
                     self.loop = False
 
                 #? Get data settings
-                data_settings = yaml.safe_load(file)['data_settings'][self.data_type]
+                data_settings = raw_config['data_settings'][self.data_type]
                 #check if data settings is not empty
                 if not data_settings:
                     self.get_logger().error("Data settings not provided in config file")
@@ -405,8 +403,10 @@ class FlightMatrixPublisher(Node):
 
     def publish_left_frame_cb(self):
         if not self.publish_flags['left_frame']:
-            msg = self.data_provider.get_frame('left_frame', rgb=True)
-            if msg:
+            frame = self.data_provider.get_frame('left_frame', rgb=True)
+            if frame is not None:
+                msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self.left_frame_pub.publish(msg)
                 self.publish_flags['left_frame'] = True
                 if self.debug_sync:
@@ -414,8 +414,10 @@ class FlightMatrixPublisher(Node):
 
     def publish_right_frame_cb(self):
         if not self.publish_flags['right_frame']:
-            msg = self.data_provider.get_frame('right_frame', rgb=True)
-            if msg:
+            frame = self.data_provider.get_frame('right_frame', rgb=True)
+            if frame is not None:
+                msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self.right_frame_pub.publish(msg)
                 self.publish_flags['right_frame'] = True
                 if self.debug_sync:
@@ -423,8 +425,10 @@ class FlightMatrixPublisher(Node):
 
     def publish_left_zdepth_cb(self):
         if not self.publish_flags['left_zdepth']:
-            msg = self.data_provider.get_frame('left_zdepth', rgb=False)
-            if msg:
+            frame = self.data_provider.get_frame('left_zdepth', rgb=False)
+            if frame is not None:
+                msg = self.bridge.cv2_to_imgmsg(frame, encoding='mono8')
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self.left_zdepth_pub.publish(msg)
                 self.publish_flags['left_zdepth'] = True
                 if self.debug_sync:
@@ -432,8 +436,10 @@ class FlightMatrixPublisher(Node):
 
     def publish_right_zdepth_cb(self):
         if not self.publish_flags['right_zdepth']:
-            msg = self.data_provider.get_frame('right_zdepth', rgb=False)
-            if msg:
+            frame = self.data_provider.get_frame('right_zdepth', rgb=False)
+            if frame is not None:
+                msg = self.bridge.cv2_to_imgmsg(frame, encoding='mono8')
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self.right_zdepth_pub.publish(msg)
                 self.publish_flags['right_zdepth'] = True
                 if self.debug_sync:
@@ -441,8 +447,10 @@ class FlightMatrixPublisher(Node):
 
     def publish_left_seg_cb(self):
         if not self.publish_flags['left_seg']:
-            msg = self.data_provider.get_frame('left_segmentation', rgb=True)
-            if msg:
+            frame = self.data_provider.get_frame('left_segmentation', rgb=True)
+            if frame is not None:
+                msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self.left_seg_pub.publish(msg)
                 self.publish_flags['left_seg'] = True
                 if self.debug_sync:
@@ -450,8 +458,10 @@ class FlightMatrixPublisher(Node):
 
     def publish_right_seg_cb(self):
         if not self.publish_flags['right_seg']:
-            msg = self.data_provider.get_frame('right_segmentation', rgb=True)
-            if msg:
+            frame = self.data_provider.get_frame('right_segmentation', rgb=True)
+            if frame is not None:
+                msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self.right_seg_pub.publish(msg)
                 self.publish_flags['right_seg'] = True
                 if self.debug_sync:
@@ -459,7 +469,7 @@ class FlightMatrixPublisher(Node):
 
     def publish_sensor_data(self):
         if not self.publish_flags['sensor_data']:
-            sensor_row, timestamp = self.data_provider.get_sensor_data()
+            sensor_row = self.data_provider.get_sensor_data()
             if sensor_row is None:
                 return
 

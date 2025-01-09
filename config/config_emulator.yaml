@@ -3,8 +3,8 @@ flightmatrix_publisher:
 
     # Data settings
     data:
-      data_directory: "/home/prity/Data/default-dense"
-      data_type: "FLIGHTMATRIX" # "FLIGHTMATRIX" or "KITTI"
+      data_directory: "/home/prity/Data/KITTI/Road_01"
+      data_type: "KITTI" # "FLIGHTMATRIX" or "KITTI"
       loop: true
 
     # Image resolution
@@ -35,8 +35,8 @@ flightmatrix_publisher:
 # Data that are available for different data types and their respective paths
 data_settings:
   FLIGHTMATRIX:
-    left_frame: "left_frame"
-    right_frame: "right_frame"
+    left_frame: "left_frames"
+    right_frame: "right_frames"
     left_zdepth: "left_zdepth"
     right_zdepth: "right_zdepth"
     left_seg: "left_seg"
