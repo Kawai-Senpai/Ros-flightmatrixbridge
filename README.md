@@ -6,6 +6,9 @@ This repository contains the ROS2 nodes for interfacing with the Flight Matrix s
 
 For more information, visit the [GitHub repository](https://github.com/Kawai-Senpai/Py-FlightMatrix-Bridge).
 
+## Last Updated
+This document was last updated on December, 2024.
+
 ## What is Flight Matrix?
 
 This is actually a ROS-based API for Flight Matrix Simulation Software.
