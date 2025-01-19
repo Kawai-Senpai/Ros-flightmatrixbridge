@@ -1,27 +1,127 @@
 # ROS Flight Matrix Bridge
 
-This repository contains the ROS2 nodes for interfacing with the Flight Matrix system. It includes publishers for various sensor data and a drone controller for handling joystick inputs.
-
-## Learn More
-
-For more information, visit the [GitHub repository](https://github.com/Kawai-Senpai/Py-FlightMatrix-Bridge).
-
-## Last Updated
-This document was last updated on December, 2024.
-
-## What is Flight Matrix?
-
-This is actually a ROS-based API for Flight Matrix Simulation Software.
+A comprehensive ROS2 bridge for interfacing with the Flight Matrix simulation system, providing robust sensor data handling and drone control capabilities.
 
 ![FlightMatrix Bridge Cover](https://github.com/Kawai-Senpai/Ros-flightmatrixbridge/blob/25f5746eb33855ee0bda88b32eba03786cbfa19e/Assets/SplashScreenBridge-ROS.png)
 
-**FlightMatrix Bridge** is a Python-based API designed for controlling and fetching information, frames, and other data from Flight Matrix. This library enables efficient and real-time communication between various processes in a system, primarily designed for interfacing flight simulators, UAV systems, or other robotics platforms. It utilizes the `multiprocessing.shared_memory` module to share data such as frames, sensor data, and movement commands across multiple processes.
+## Overview
 
-Download the software from [Flight Matrix](https://gamejolt.com/games/flightmatrix/933049).
+FlightMatrix Bridge is a sophisticated Python-based API that establishes a seamless connection between ROS2 and the Flight Matrix simulation environment. It provides:
 
-## Emulator Mode
+- Real-time sensor data streaming
+- High-performance frame capture and processing
+- Flexible data replay capabilities
+- Multi-format data support (FLIGHTMATRIX, KITTI, VIDEO)
+- Advanced synchronization mechanisms
+- Configurable publishing options
 
-The FlightMatrix Bridge includes an emulator mode that allows you to replay recorded data without requiring the actual Flight Matrix software. This is useful for testing and development.
+## Architecture
+
+The bridge implements a modular architecture with the following key components:
+
+1. **Data Providers**:
+   - FlightMatrixDataProvider: Direct interface with Flight Matrix
+   - KittiDataProvider: KITTI dataset support
+   - VideoDataProvider: Video file playback
+
+2. **Publishers**:
+   - Image streams (RGB, depth, segmentation)
+   - Sensor data (IMU, GPS, magnetometer)
+   - Odometry
+   - LiDAR data
+   - Collision information
+
+3. **Controllers**:
+   - Drone control interface
+   - Joystick input handling
+
+## Data Types and Formats
+
+### 1. FLIGHTMATRIX Mode
+Direct integration with Flight Matrix simulator:
+
+### 2. KITTI Mode
+Support for KITTI dataset format:
+- Images: sequential PNG files (000000.png, 000001.png, etc.)
+- OXTS data: text files with sensor data in KITTI format
+- Directory structure must follow KITTI format:
+  ```
+  dataset/
+  ├── image_02/data/      # Left camera images
+  ├── image_03/data/      # Right camera images
+  └── oxts/data/          # GPS/IMU data
+  ```
+
+### 3. VIDEO Mode
+Simple video file playback:
+- Supports common video formats (mp4, avi, etc.)
+- Only publishes left frame data
+- No sensor data available
+
+## Configuration
+
+The configuration file (`config_emulator.yaml`) should be adjusted based on your data type:
+
+```yaml
+flightmatrix_publisher:
+  ros__parameters:
+    # Data settings
+    data:
+      data_directory: "/path/to/your/data"
+      data_type: "FLIGHTMATRIX"  # or "KITTI" or "VIDEO"
+      loop: true  # whether to loop the data playback
+
+    # Image resolution
+    resolution:
+      width: 1226
+      height: 370
+
+    # Publisher settings
+    publishers:
+      left_frame: true
+      right_frame: false
+      left_zdepth: false
+      right_zdepth: false
+      left_seg: false
+      right_seg: false
+      sensor_data: false
+
+      queue_size: 10
+      timer_delay: 0.0
+
+    # Projection settings (only for KITTI data)
+    projection:
+      wgs84: "epsg:4326"
+      local_proj: "utm"
+      local_zone: 33
+      local_datum: "WGS84"
+```
+
+### Data Type Specific Settings
+
+1. For FLIGHTMATRIX:
+```yaml
+data:
+  data_directory: "/path/to/flightmatrix/data"
+  data_type: "FLIGHTMATRIX"
+```
+
+2. For KITTI:
+```yaml
+data:
+  data_directory: "/path/to/kitti/dataset"
+  data_type: "KITTI"
+```
+
+3. For VIDEO:
+```yaml
+data:
+  data_directory: "/path/to/video/file.mp4"
+  data_type: "VIDEO"
+publishers:
+  left_frame: true
+  # Other publishers should be false for VIDEO type
+```
 
 ### Data Format Requirements
 
@@ -150,18 +250,20 @@ def generate_launch_description():
 This launch file starts the FlightMatrix emulator node for replaying recorded data.
 
 ```python
+import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
-    config_file_path = "/path/to/config_emulator.yaml"
-    data_directory_path = "/path/to/record_folder"
+    package_share_directory = get_package_share_directory('flightmatrix_ros2')
+    config_file_path = os.path.join(package_share_directory, 'config', 'config_emulator.yaml')
 
+    config_file_path = LaunchConfiguration('config_file', default=config_file_path)
     config_file = LaunchConfiguration('config_file', default=config_file_path)
-    data_directory = LaunchConfiguration('data_directory', default=data_directory_path)
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -169,17 +271,12 @@ def generate_launch_description():
             default_value=config_file_path,
             description='Absolute path to the config file'
         ),
-        DeclareLaunchArgument(
-            'data_directory',
-            default_value=data_directory_path,
-            description='Absolute path to the data directory'
-        ),
         Node(
             package='flightmatrix_ros2',
             executable='flightmatrix_publisher_emulator',
             name='flightmatrix_publisher_node',
             output='screen',
-            parameters=[{'config_file': config_file, 'data_directory': data_directory}]
+            parameters=[{'config_file': config_file}]
         )
     ])
 ```
