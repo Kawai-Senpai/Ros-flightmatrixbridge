@@ -17,7 +17,11 @@ setup(
     ],
     install_requires=[
         'setuptools',
-        'transforms3d==0.4.2'
+        'transforms3d==0.4.2',
+        'numpy==1.26.4',
+        'pandas==2.0.0',
+        'opencv-python==4.6.0.66',
+        'pyproj'
     ],
     zip_safe=True,
     maintainer='Ranit Bhowmick',

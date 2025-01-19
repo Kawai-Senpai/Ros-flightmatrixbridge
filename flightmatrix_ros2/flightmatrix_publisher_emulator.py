@@ -260,6 +260,50 @@ class KittiDataProvider(BaseDataProvider):
     def get_collision_data(self, sensor_row):
         return None  # KITTI dataset does not provide collision data
 
+class VideoDataProvider(BaseDataProvider):
+    def __init__(self, data_dir, config, data_settings, logger):
+        super().__init__(data_dir, config, data_settings, logger)
+        self.cap = None
+        self.total_frames = 0
+
+    def load_data(self):
+        self.cap = cv2.VideoCapture(self.data_dir)
+        if not self.cap.isOpened():
+            self.logger.error(f"Video file not found: {self.data_dir}")
+            return False
+        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        return True
+
+    def get_frame(self, frame_type, rgb=True):
+        if not self.cap or not self.cap.isOpened():
+            return None
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_index)
+        ret, frame = self.cap.read()
+        if not ret:
+            return None
+        return frame
+
+    def get_total_frames(self):
+        return self.total_frames
+
+    def get_sensor_data(self):
+        return None
+
+    def get_imu_data(self):
+        return None
+
+    def get_magnetometer_data(self):
+        return None
+
+    def get_odometry_data(self):
+        return None
+
+    def get_lidar_data(self):
+        return None
+
+    def get_collision_data(self):
+        return None
+
 class FlightMatrixPublisher(Node):
     
     def __init__(self):
@@ -321,6 +365,8 @@ class FlightMatrixPublisher(Node):
             self.data_provider = FlightMatrixDataProvider(self.data_dir, config, data_settings, self.get_logger())
         elif self.data_type == 'KITTI':
             self.data_provider = KittiDataProvider(self.data_dir, config, data_settings, self.get_logger())
+        elif self.data_type == 'VIDEO':
+            self.data_provider = VideoDataProvider(self.data_dir, config, data_settings, self.get_logger())
         else:
             self.get_logger().error(f"Unsupported data type: {self.data_type}")
             return

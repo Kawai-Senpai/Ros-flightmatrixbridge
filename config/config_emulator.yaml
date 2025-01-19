@@ -3,8 +3,9 @@ flightmatrix_publisher:
 
     # Data settings
     data:
-      data_directory: "/home/prity/Data/KITTI/Road_01"
-      data_type: "KITTI" # "FLIGHTMATRIX" or "KITTI"
+      #data_directory: "/home/ranit/Data/KITTI/Road_01"
+      data_directory: "/home/ranit/Downloads/drone.mp4"
+      data_type: "VIDEO" # "FLIGHTMATRIX" or "KITTI" or "VIDEO"
       loop: true
 
     # Image resolution
@@ -20,7 +21,7 @@ flightmatrix_publisher:
       right_zdepth: false
       left_seg: false
       right_seg: false
-      sensor_data: true
+      sensor_data: false
 
       queue_size: 10
       timer_delay: 0.0
@@ -51,3 +52,12 @@ data_settings:
     left_seg: False
     right_seg: False
     sensor_data: "oxts/data"
+
+  VIDEO:
+    left_frame: true
+    right_frame: false
+    left_zdepth: false
+    right_zdepth: false
+    left_seg: false
+    right_seg: false
+    sensor_data: false
