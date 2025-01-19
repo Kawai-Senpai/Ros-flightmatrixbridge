@@ -9,12 +9,9 @@ import math
 import numpy as np
 from builtin_interfaces.msg import Time
 from cv_bridge import CvBridge
-from ament_index_python.packages import get_package_share_directory
-import os
 import yaml
 from multiprocessing import shared_memory
 import struct
-from rclpy.parameter import Parameter
 
 class FlightMatrixPublisher(Node):
     
@@ -31,11 +28,12 @@ class FlightMatrixPublisher(Node):
         try:
             with open(config_file, 'r') as file:
                 config = yaml.safe_load(file)['flightmatrix_publisher']['ros__parameters']
+                self.get_logger().info(f"Config file loaded: {config_file}")
         except FileNotFoundError:
-            self.get_logger().error(f"Config file not found: {config_file}")
+            self.get_logger().error(f"Config file not found: {config_file}. Set the correct path in the launch file.")
             return
         except yaml.YAMLError as exc:
-            self.get_logger().error(f"Error parsing config file: {exc}")
+            self.get_logger().error(f"Error parsing config file: {exc}. Set the correct path in the launch file.")
             return
 
         self.bridge = CvBridge()
@@ -97,6 +95,24 @@ class FlightMatrixPublisher(Node):
             self.lidar_pub = self.create_publisher(Float32MultiArray, 'lidar_data', config['publishers']['queue_size'])
             self.collision_pub = self.create_publisher(PoseStamped, 'collision', config['publishers']['queue_size'])
             self.sensor_timer = self.create_timer(config['publishers']['timer_delay'], self.publish_sensor_data)
+
+    def safe_exit(self, message):
+        """Safely exit the program with an error message"""
+        self.get_logger().error(message)
+        # Clean up any open shared memory blocks
+        for shm_block in self.shm.values():
+            try:
+                shm_block.close()
+            except:
+                pass
+        for shm_time_block in self.shm_timestamps.values():
+            try:
+                shm_time_block.close()
+            except:
+                pass
+        # Shutdown the node
+        rclpy.shutdown()
+        exit(1)
     
     def _create_sharedmemory_object(self, key, name, create=False):
         try:
@@ -107,9 +123,9 @@ class FlightMatrixPublisher(Node):
                 self.shm[key] = shared_memory.SharedMemory(name=name, create=False)
                 self.shm_timestamps[key] = shared_memory.SharedMemory(name=name+'_time', create=False)
         except FileNotFoundError:
-            self.get_logger().error(f"Shared memory block not found: {name}")
+            self.safe_exit(f"Critical Error: Shared memory block not found: {name}. Turn it off from the config file and try again.")
         except Exception as e:
-            self.get_logger().error(f"Error accessing shared memory: {e}")
+            self.safe_exit(f"Critical Error: Unable to access shared memory: {name}, Error: {e}. Maybe the shared memory is not created yet / not running. As a workaround, you can turn it off from the config file and try again.")
 
     def _get_frame(self, key, rgb=True):
         try:

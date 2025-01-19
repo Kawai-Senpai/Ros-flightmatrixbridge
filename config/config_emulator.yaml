@@ -1,0 +1,63 @@
+flightmatrix_publisher:
+  ros__parameters:
+
+    # Data settings
+    data:
+      #data_directory: "/home/ranit/Data/KITTI/Road_01"
+      data_directory: "/home/ranit/Downloads/drone.mp4"
+      data_type: "VIDEO" # "FLIGHTMATRIX" or "KITTI" or "VIDEO"
+      loop: true
+
+    # Image resolution
+    resolution:
+      width: 1226
+      height: 370
+
+    # Publisher settings
+    publishers:
+      left_frame: true
+      right_frame: false
+      left_zdepth: false
+      right_zdepth: false
+      left_seg: false
+      right_seg: false
+      sensor_data: false
+
+      queue_size: 10
+      timer_delay: 0.0
+
+    # Projection settings for KITTI data
+    projection:
+      wgs84: "epsg:4326"
+      local_proj: "utm"
+      local_zone: 33
+      local_datum: "WGS84"
+
+# Data that are available for different data types and their respective paths
+data_settings:
+  FLIGHTMATRIX:
+    left_frame: "left_frames"
+    right_frame: "right_frames"
+    left_zdepth: "left_zdepth"
+    right_zdepth: "right_zdepth"
+    left_seg: "left_seg"
+    right_seg: "right_seg"
+    sensor_data: "sensor_data.csv"
+
+  KITTI:
+    left_frame: "image_02/data"
+    right_frame: "image_03/data"
+    left_zdepth: False
+    right_zdepth: False
+    left_seg: False
+    right_seg: False
+    sensor_data: "oxts/data"
+
+  VIDEO:
+    left_frame: true
+    right_frame: false
+    left_zdepth: false
+    right_zdepth: false
+    left_seg: false
+    right_seg: false
+    sensor_data: false

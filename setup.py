@@ -1,4 +1,5 @@
 from setuptools import setup
+from glob import glob
 
 package_name = 'flightmatrix_ros2'
 
@@ -11,10 +12,16 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/flightmatrix.launch.py']),
+        ('share/' + package_name + '/launch', ['launch/flightmatrix_emulator.launch.py']),
+        ('share/' + package_name + '/config', glob('config/*.yaml'))
     ],
     install_requires=[
         'setuptools',
-        'transforms3d==0.4.2'
+        'transforms3d==0.4.2',
+        'numpy==1.26.4',
+        'pandas==2.0.0',
+        'opencv-python==4.6.0.66',
+        'pyproj'
     ],
     zip_safe=True,
     maintainer='Ranit Bhowmick',
@@ -24,6 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             'flightmatrix_publisher = flightmatrix_ros2.flightmatrix_publisher:main',
+            'flightmatrix_publisher_emulator = flightmatrix_ros2.flightmatrix_publisher_emulator:main',
             'drone_controller = flightmatrix_ros2.drone_controller:main'
         ],
     },

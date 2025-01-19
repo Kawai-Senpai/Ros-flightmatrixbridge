@@ -1,8 +1,11 @@
+
 flightmatrix_publisher:
   ros__parameters:
+
     resolution:
       width: 1226
       height: 370
+
     publishers:
       left_frame: true
       right_frame: false
@@ -11,9 +14,11 @@ flightmatrix_publisher:
       left_seg: false
       right_seg: false
       sensor_data: true
+
       queue_size: 10
-      timer_delay: 0.1
+      timer_delay: 0.0
 
 drone_controller:
   ros__parameters:
+
     placeholder: 0
